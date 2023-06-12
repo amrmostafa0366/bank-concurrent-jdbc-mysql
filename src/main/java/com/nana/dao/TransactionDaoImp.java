@@ -17,17 +17,15 @@ public class TransactionDaoImp implements TransactionDao{
             return null;
         }
         List<Transaction> transactions = new LinkedList<Transaction>();
-        BankAccountDaoImp dao = new BankAccountDaoImp();
         String query = "SELECT * FROM transactions;";
         try(PreparedStatement preparedStatement = connection.prepareStatement(query)) {
             ResultSet resultSet = preparedStatement.executeQuery();
             while (resultSet.next()){
                 Transaction transaction = new Transaction(
                   resultSet.getInt("id"),
-                   dao.findById(resultSet.getInt("from_id")),
-                   dao.findById(resultSet.getInt("to_id")),
-                  resultSet.getDouble("amount")
-                );
+                        resultSet.getInt("from_id"),
+                        resultSet.getInt("to_id"),
+                        resultSet.getDouble("amount"));
                 transactions.add(transaction);
             }
         }catch(SQLException e){
@@ -42,7 +40,6 @@ public class TransactionDaoImp implements TransactionDao{
         if(connection == null){
             return null;
         }
-        BankAccountDaoImp dao = new BankAccountDaoImp();
         Transaction transaction = null;
         String query = "SELECT * FROM transactions;";
         try(PreparedStatement preparedStatement = connection.prepareStatement(query)) {
@@ -50,8 +47,8 @@ public class TransactionDaoImp implements TransactionDao{
             while (resultSet.next()){
                  transaction = new Transaction(
                         resultSet.getInt("id"),
-                        dao.findById(resultSet.getInt("from_id")),
-                        dao.findById(resultSet.getInt("to_id")),
+                        resultSet.getInt("from_id"),
+                        resultSet.getInt("to_id"),
                         resultSet.getDouble("amount")
                 );
             }
@@ -70,8 +67,8 @@ public class TransactionDaoImp implements TransactionDao{
         if(transaction.getId() > 0){//update
             String query = "UPDATE transactions SET from_id=?, to_id=? , amount=? WHERE id=?;";
             try(PreparedStatement preparedStatement = connection.prepareStatement(query)){
-                preparedStatement.setInt(1,transaction.getFrom().getId());
-                preparedStatement.setInt(2,transaction.getTo().getId());
+                preparedStatement.setInt(1,transaction.getFromId());
+                preparedStatement.setInt(2,transaction.getToId());
                 preparedStatement.setDouble(3,transaction.getAmount());
                 preparedStatement.setInt(4,transaction.getId());
                 preparedStatement.executeUpdate();
@@ -81,8 +78,8 @@ public class TransactionDaoImp implements TransactionDao{
         }else{//create
             String query = "INSERT INTO transactions  (from_id, to_id , amount) VALUES (?,?,?);";
             try(PreparedStatement preparedStatement = connection.prepareStatement(query)){
-                preparedStatement.setInt(1,transaction.getFrom().getId());
-                preparedStatement.setInt(2,transaction.getTo().getId());
+                preparedStatement.setInt(1,transaction.getFromId());
+                preparedStatement.setInt(2,transaction.getToId());
                 preparedStatement.setDouble(3,transaction.getAmount());
                 preparedStatement.executeUpdate();
             }catch (SQLException e){
