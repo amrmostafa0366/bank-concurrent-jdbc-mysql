@@ -10,8 +10,8 @@ public class Transaction implements Runnable {
     private int fromId;
     private int toId;
     private double amount;
-    private BankAccountDao accountDao = new BankAccountDaoImp();
-    private TransactionDao transactionDao = new TransactionDaoImp();
+    private final BankAccountDao ACCOUNT_DAO = new BankAccountDaoImp();
+    private final TransactionDao TRANSACTION_DAO = new TransactionDaoImp();
 
     public Transaction(int id, int fromId, int toId, double amount) {
         this.id = id;
@@ -53,56 +53,46 @@ public class Transaction implements Runnable {
     }
 
     @Override
-    public void run() {
-        for (int i = 0; i < 20; i++) {
+    public  void run() {
             if (amount < 0 && fromId == toId) {
-                withdraw();
+                withdraw(fromId);
             } else if (amount > 0 && fromId == toId) {
-                deposit();
+                deposit(fromId);
             } else if (amount > 0 && fromId != toId) {
                 transact();
             }
         }
-    }
 
-    private synchronized void withdraw() {
-        BankAccount from = accountDao.findById(fromId);
+    private synchronized void withdraw(int id) {
+        BankAccount from = ACCOUNT_DAO.findById(id);
         if (from.getBalance() >= Math.abs(amount)) {
             from.setBalance(from.getBalance() - Math.abs(amount));
-            accountDao.save(from);
-            transactionDao.save(this);
+            ACCOUNT_DAO.save(from);
             System.out.println("Withdrawal of " + amount + " from " + from.getName() + " successful");
         } else {
             System.out.println("Insufficient funds in " + from.getName() + " to withdraw " + amount);
         }
     }
 
-    private synchronized void deposit() {
-        BankAccount from = accountDao.findById(fromId);
+    private synchronized void deposit(int id) {
+        BankAccount from = ACCOUNT_DAO.findById(id);
         from.setBalance(from.getBalance() + amount);
-        accountDao.save(from);
-        transactionDao.save(this);
+        ACCOUNT_DAO.save(from);
         System.out.println("Deposit of " + amount + " to " + from.getName() + " successful");
     }
 
     private synchronized void transact() {
-        BankAccount from = accountDao.findById(fromId);
-        BankAccount to = accountDao.findById(toId);
-        synchronized (from) {
-            synchronized (to) {
-                if (from.getBalance() >= amount) {
-                    from.setBalance(from.getBalance() - amount);
-                    to.setBalance(to.getBalance() + amount);
-                    accountDao.save(from);
-                    accountDao.save(to);
-                    transactionDao.save(this);
-                    System.out.println("Transaction of " + amount + " from " + from.getName() + " to " + to.getName()
-                            + " successful");
-                } else {
-                    System.out.println("Insufficient funds in " + from.getName() + " to transfer " + amount);
-                }
+        BankAccount from = ACCOUNT_DAO.findById(fromId);
+        BankAccount to = ACCOUNT_DAO.findById(toId);
+            if (from.getBalance() >= amount) {
+                withdraw(fromId);
+                deposit(toId);
+                TRANSACTION_DAO.save(this);
+                System.out.println("Transaction of " + amount + " from " + from.getName() + " to " + to.getName()
+                        + " successful");
+            } else {
+                System.out.println("Insufficient funds in " + from.getName() + " to transfer " + amount);
             }
-        }
     }
 
     @Override

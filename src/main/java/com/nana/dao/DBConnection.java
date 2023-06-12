@@ -10,7 +10,7 @@ public class DBConnection {
     private static final String DB_NAME = "banko_db";
     private static final String USERNAME = "root";
     private static final String PASSWORD = "";
-    private static Connection connection;
+    private static volatile Connection connection;
 
     private DBConnection() {
         try {
