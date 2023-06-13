@@ -5,6 +5,8 @@ import com.nana.dao.BankAccountDaoImp;
 import com.nana.dao.TransactionDao;
 import com.nana.dao.TransactionDaoImp;
 
+import java.util.concurrent.locks.ReentrantLock;
+
 public class Transaction implements Runnable {
     private int id;
     private int fromId;
@@ -18,6 +20,16 @@ public class Transaction implements Runnable {
         this.fromId = fromId;
         this.toId = toId;
         this.amount = amount;
+    }
+    public Transaction(int id, int fromId, double amount) {
+        this.id = id;
+        this.fromId = fromId;
+        this.toId = fromId;
+        this.amount = amount;
+    }
+
+    public Transaction() {
+
     }
 
     public int getId() {
@@ -58,40 +70,51 @@ public class Transaction implements Runnable {
                 withdraw(fromId);
             } else if (amount > 0 && fromId == toId) {
                 deposit(fromId);
-            } else if (amount > 0 && fromId != toId) {
+            } else if (amount > 0 ) {
                 transact();
             }
         }
 
-    private synchronized void withdraw(int id) {
+    public synchronized void withdraw(int id) {
         BankAccount from = ACCOUNT_DAO.findById(id);
-        if (from.getBalance() >= Math.abs(amount)) {
-            from.setBalance(from.getBalance() - Math.abs(amount));
-            ACCOUNT_DAO.save(from);
-            System.out.println("Withdrawal of " + amount + " from " + from.getName() + " successful");
-        } else {
-            System.out.println("Insufficient funds in " + from.getName() + " to withdraw " + amount);
+        if (from != null) {
+            if (from.getBalance() >= Math.abs(amount)) {
+                from.setBalance(from.getBalance() - Math.abs(amount));
+                ACCOUNT_DAO.save(from);
+                System.out.println("Withdrawal of " + amount + " from " + from.getName() + " successful");
+            } else {
+                System.out.println("Insufficient funds in " + from.getName() + " to withdraw " + amount);
+            }
+        }else{
+            System.out.println("Invalid ID");
         }
     }
 
-    private synchronized void deposit(int id) {
+    public synchronized void deposit(int id) {
         BankAccount from = ACCOUNT_DAO.findById(id);
-        from.setBalance(from.getBalance() + amount);
-        ACCOUNT_DAO.save(from);
-        System.out.println("Deposit of " + amount + " to " + from.getName() + " successful");
+        if (from != null) {
+            from.setBalance(from.getBalance() + amount);
+            ACCOUNT_DAO.save(from);
+            System.out.println("Deposit of " + amount + " to " + from.getName() + " successful");
+        }else{
+            System.out.println("Invalid ID");
+        }
     }
-
-    private synchronized void transact() {
-        BankAccount from = ACCOUNT_DAO.findById(fromId);
-        BankAccount to = ACCOUNT_DAO.findById(toId);
-            if (from.getBalance() >= amount) {
-                withdraw(fromId);
-                deposit(toId);
-                TRANSACTION_DAO.save(this);
-                System.out.println("Transaction of " + amount + " from " + from.getName() + " to " + to.getName()
-                        + " successful");
-            } else {
-                System.out.println("Insufficient funds in " + from.getName() + " to transfer " + amount);
+    public synchronized void transact() {
+            BankAccount from = ACCOUNT_DAO.findById(fromId);
+            BankAccount to = ACCOUNT_DAO.findById(toId);
+            if(from != null && to != null) {
+                if (from.getBalance() >= amount) {
+                    withdraw(fromId);
+                    deposit(toId);
+                    TRANSACTION_DAO.save(this);
+                    System.out.println("Transaction of " + amount + " from " + from.getName() + " to " + to.getName() + " successful");
+                } else {
+                    System.out.println("Insufficient funds in " + from.getName() + " to transfer " + amount);
+                }
+            }
+            else{
+                System.out.println("Invalid IDs");
             }
     }
 

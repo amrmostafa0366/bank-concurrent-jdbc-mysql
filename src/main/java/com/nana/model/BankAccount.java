@@ -3,7 +3,7 @@ package com.nana.model;
 public class BankAccount {
     private int id;
     private String name;
-    private double balance;
+    private volatile double balance;
     public BankAccount(int id, String name, double balance) {
         this.id = id;
         this.name = name;
