@@ -1,9 +1,17 @@
 package com.nana.model;
 
-public class BankAccount {
+import java.io.Serializable;
+
+public class BankAccount implements Serializable {
     private int id;
     private String name;
     private volatile double balance;
+
+    public BankAccount(String name, double balance) {
+        this.name = name;
+        this.balance = balance;
+    }
+
     public BankAccount(int id, String name, double balance) {
         this.id = id;
         this.name = name;

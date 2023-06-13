@@ -35,7 +35,7 @@ public class Bank {
                     System.out.print("Enter initial balance: ");
                     double initialBalance = scanner.nextDouble();
                     scanner.nextLine(); // Consume newline
-                    account = new BankAccount(0,accountName, initialBalance);
+                    account = new BankAccount(accountName, initialBalance);
                     accountDao.save(account);
                     System.out.println("Account created successfully!");
                     break;

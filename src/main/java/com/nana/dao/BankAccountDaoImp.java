@@ -3,10 +3,8 @@ package com.nana.dao;
 
 import com.nana.model.BankAccount;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.io.*;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,13 +20,15 @@ public class BankAccountDaoImp implements BankAccountDao {
         String query = "SELECT * FROM accounts;";
         try(PreparedStatement preparedStatement = connection.prepareStatement(query)){
             ResultSet resultSet = preparedStatement.executeQuery();
-            while (resultSet.next()){
-                BankAccount bankAccount = new BankAccount(
-                        resultSet.getInt("id"),
-                        resultSet.getString("name"),
-                        resultSet.getDouble("balance")
-                );
-                bankAccounts.add(bankAccount);
+            while (resultSet.next()) {
+                // Deserialize the object
+                byte[] serializedData = resultSet.getBytes("serialized_object");
+                try (ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(serializedData))) {
+                    BankAccount bankAccount = (BankAccount) ois.readObject();
+                    bankAccounts.add(bankAccount);
+                } catch (ClassNotFoundException | IOException e) {
+                    e.printStackTrace();
+                }
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -48,46 +48,58 @@ public class BankAccountDaoImp implements BankAccountDao {
             preparedStatement.setInt(1,id);
             ResultSet resultSet = preparedStatement.executeQuery();
             if(resultSet.next()) {
-                bankAccount=  BankAccount.builder()
-                        .id(resultSet.getInt("id"))
-                        .name(resultSet.getString("name"))
-                        .balance(resultSet.getDouble("balance"))
-                        .build();
+                // Deserialize the object
+                byte[] serializedData = resultSet.getBytes("serialized_object");
+                try (ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(serializedData))) {
+                     bankAccount = (BankAccount) ois.readObject();
+                } catch (ClassNotFoundException | IOException e) {
+                    e.printStackTrace();
+                }
             }
         }catch (SQLException e){
             e.printStackTrace();
         }
         return bankAccount;
     }
-
     @Override
     public void save(BankAccount bankAccount) {
         Connection connection = DBConnection.getConnection();
-        if(connection == null){
+        if (connection == null) {
             return;
         }
-        if(bankAccount.getId() > 0){//update
-            String query = "UPDATE accounts SET name=? , balance=? WHERE id=?;";
-            try(PreparedStatement preparedStatement = connection.prepareStatement(query)){
-                preparedStatement.setString(1,bankAccount.getName());
-                preparedStatement.setDouble(2,bankAccount.getBalance());
-                preparedStatement.setInt(3,bankAccount.getId());
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        try (ObjectOutputStream oos = new ObjectOutputStream(bos)) {
+            oos.writeObject(bankAccount);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        byte[] serializedData = bos.toByteArray();
+        String query;
+        if (bankAccount.getId() > 0) { // update
+            query = "UPDATE accounts SET serialized_object=? WHERE id=?;";
+            try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+                preparedStatement.setBytes(1, serializedData);
+                preparedStatement.setInt(2, bankAccount.getId());
                 preparedStatement.executeUpdate();
-            }catch (SQLException e){
+            } catch (SQLException e) {
                 e.printStackTrace();
             }
-        }else{//create
-            String query = "INSERT INTO accounts (name,balance) VALUES(?,?);";
-            try(PreparedStatement preparedStatement = connection.prepareStatement(query)){
-                preparedStatement.setString(1,bankAccount.getName());
-                preparedStatement.setDouble(2,bankAccount.getBalance());
+        } else { // create
+            query = "INSERT INTO accounts (serialized_object) VALUES(?);";
+            try (PreparedStatement preparedStatement = connection.prepareStatement(query,Statement.RETURN_GENERATED_KEYS)) {
+                preparedStatement.setBytes(1, serializedData);
                 preparedStatement.executeUpdate();
-            }catch (SQLException e){
+                ResultSet resultSet = preparedStatement.getGeneratedKeys();
+                if (resultSet.next()) {
+                    bankAccount.setId(resultSet.getInt(1));
+                    save(bankAccount);
+                }
+            } catch (SQLException e) {
                 e.printStackTrace();
             }
         }
-
     }
+
 
     @Override
     public void deleteById(int id) {

@@ -6,9 +6,9 @@ USE banko_db;
 
 CREATE TABLE accounts (
   id INT(15) PRIMARY KEY AUTO_INCREMENT,
-  name VARCHAR(50),
-  balance DOUBLE
+  serialized_object BLOB
 );
+
 
 CREATE TABLE transactions (
     id INT(15) PRIMARY KEY AUTO_INCREMENT,
