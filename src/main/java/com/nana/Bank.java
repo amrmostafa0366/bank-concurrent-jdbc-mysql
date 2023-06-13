@@ -5,6 +5,7 @@ import com.nana.dao.BankAccountDaoImp;
 import com.nana.model.BankAccount;
 import com.nana.model.Transaction;
 
+import java.util.List;
 import java.util.Scanner;
 
 public class Bank {
@@ -17,10 +18,10 @@ public class Bank {
         while (true) {
             System.out.println(
                     "Welcome to the Bank System\n"+
-                    "1. Create Account    " + "2. View Account\n"+
-                    "3. Deposit           " + "4. Withdraw\n"+
-                    "5. Transact          " + "6. Exit\n"+
-                    "7. Concurrency"
+                    "1. Create Account      " + "2. View Account\n"+
+                    "3. Deposit             " + "4. Withdraw\n"+
+                    "5. Transact            " + "6. Concurrency\n"+
+                    "7. Set All Same Amount " + "8. Exit"
                     );
             System.out.print("Enter your choice: ");
             int choice = scanner.nextInt();
@@ -81,13 +82,8 @@ public class Bank {
                     transaction = new Transaction(0,fromId,toId,amount);
                     transaction.run();
                     break;
-                case 6:
-                    System.out.println("Exiting...");
-                    System.exit(0);
-                    break;
-                case 7:
-                    System.out.println("Concurrency...");
-                    Thread t1 = new Thread(new Transaction(0, 1,2, 1d));
+                case 6:System.out.println("Concurrency...");
+                    Thread t1 = new Thread(new Transaction(0, 1,2, 1d)); //initial balance of all of them is 100
                     Thread t2 = new Thread(new Transaction(0, 2,3, 1d));
                     Thread t3 = new Thread(new Transaction(0, 3,5, 1d));
                     Thread t4 = new Thread(new Transaction(0, 5,8, 1d));
@@ -101,11 +97,25 @@ public class Bank {
                     t4.join();
                     System.out.println(
                             accountDao.findById(1) +
-                            "\n" + accountDao.findById(2) +
-                            "\n" + accountDao.findById(3) +
-                            "\n" + accountDao.findById(5) +
-                            "\n" + accountDao.findById(8));
+                                    "\n" + accountDao.findById(2) +
+                                    "\n" + accountDao.findById(3) +
+                                    "\n" + accountDao.findById(5) +
+                                    "\n" + accountDao.findById(8));
                     break;
+
+                case 7:System.out.println("Set All The Same Amount...");
+                    List<BankAccount> accounts = accountDao.findAll();
+                    System.out.print("Enter the amount : ");
+                    double a = scanner.nextDouble();
+                    for(BankAccount acc : accounts){
+                        acc.setBalance(a);
+                        accountDao.save(acc);
+                    }
+                    break;
+                case 8:System.out.println("Exiting...");
+                    System.exit(0);
+                    break;
+
                 default:
                     System.out.println("Invalid choice! Please try again.");
                     break;
