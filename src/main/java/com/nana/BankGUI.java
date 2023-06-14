@@ -2,6 +2,8 @@ package com.nana;
 
 import com.nana.dao.BankAccountDao;
 import com.nana.dao.BankAccountDaoImp;
+import com.nana.dao.TransactionDao;
+import com.nana.dao.TransactionDaoImp;
 import com.nana.model.BankAccount;
 import com.nana.model.Transaction;
 
@@ -9,15 +11,17 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.util.List;
 
 public class BankGUI extends JFrame {
     private final BankAccountDao accountDao;
+    private final TransactionDao TRANSACTION_DAO = new TransactionDaoImp();
     private BankAccount account;
     private Transaction transaction;
+    private boolean isAdminMode;
 
     public BankGUI() {
         accountDao = new BankAccountDaoImp();
+        isAdminMode = false;
 
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setTitle("Bank System");
@@ -44,14 +48,8 @@ public class BankGUI extends JFrame {
         constraints.fill = GridBagConstraints.HORIZONTAL;
         constraints.insets = new Insets(10, 10, 10, 10);
 
-        addButton(buttonPanel, "Create Account", this::createAccount, constraints, 0, 0);
-        addButton(buttonPanel, "View Account", this::viewAccount, constraints, 0, 1);
-        addButton(buttonPanel, "Deposit", this::deposit, constraints, 1, 0);
-        addButton(buttonPanel, "Withdraw", this::withdraw, constraints, 1, 1);
-        addButton(buttonPanel, "Transact", this::transact, constraints, 2, 0);
-        addButton(buttonPanel, "Concurrency", this::concurrency, constraints, 2, 1);
-        addButton(buttonPanel, "Set All Same Amount", this::setAllSameAmount, constraints, 3, 0);
-        addButton(buttonPanel, "Exit", e -> System.exit(0), constraints, 3, 1);
+        addButton(buttonPanel, "Admin", this::adminMode, constraints, 0, 0);
+        addButton(buttonPanel, "User", this::userMode, constraints, 0, 1);
 
         mainPanel.add(buttonPanel, BorderLayout.CENTER);
 
@@ -68,7 +66,72 @@ public class BankGUI extends JFrame {
         panel.add(button, constraints);
     }
 
-    private void createAccount(ActionEvent e) {
+    private void adminMode(ActionEvent e) {
+        isAdminMode = true;
+        showAdminMenu();
+    }
+
+    private void userMode(ActionEvent e) {
+        isAdminMode = false;
+        showUserMenu();
+    }
+
+    private void showAdminMenu() {
+        while (isAdminMode) {
+            String[] adminOptions = {"Create Account", "Delete Account", "Display Account", "Display All Accounts", "Display Transactions", "Display Transaction by ID", "Exit"};
+            int choice = JOptionPane.showOptionDialog(null, "Select an option:", "Admin Menu", JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null, adminOptions, adminOptions[0]);
+
+            switch (choice) {
+                case 0:
+                    createAccount();
+                    break;
+                case 1:
+                    deleteAccount();
+                    break;
+                case 2:
+                    displayAccount();
+                    break;
+                case 3:
+                    displayAllAccounts();
+                    break;
+                case 4:
+                    displayTransactions();
+                    break;
+                case 5:
+                    displayTransactionById();
+                    break;
+                case 6:
+                    isAdminMode = false;
+                    break;
+            }
+        }
+    }
+
+    private void showUserMenu() {
+        while (!isAdminMode) {
+            String[] userOptions = {"Withdraw", "Deposit", "Transact", "Exit"};
+            int choice = JOptionPane.showOptionDialog(null, "Select an option:", "User Menu", JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null, userOptions, userOptions[0]);
+
+            switch (choice) {
+                case 0:
+                    withdraw();
+                    break;
+                case 1:
+                    deposit();
+                    break;
+                case 2:
+                    transact();
+                    break;
+                case 3:
+                    isAdminMode = true;
+                    break;
+            }
+        }
+    }
+
+
+
+    private void createAccount() {
         String accountName = JOptionPane.showInputDialog("Enter account name:");
         double initialBalance = Double.parseDouble(JOptionPane.showInputDialog("Enter initial balance:"));
 
@@ -78,14 +141,52 @@ public class BankGUI extends JFrame {
         JOptionPane.showMessageDialog(null, "Account created successfully!");
     }
 
-    private void viewAccount(ActionEvent e) {
+    private void deleteAccount() {
+        int accountId = Integer.parseInt(JOptionPane.showInputDialog("Enter account ID:"));
+        accountDao.deleteById(accountId);
+
+        JOptionPane.showMessageDialog(null, "Account deleted successfully!");
+    }
+
+    private void displayAccount() {
         int accountId = Integer.parseInt(JOptionPane.showInputDialog("Enter account ID:"));
         account = accountDao.findById(accountId);
 
         JOptionPane.showMessageDialog(null, "Account Details:\n" + account);
     }
 
-    private void deposit(ActionEvent e) {
+    private void displayAllAccounts() {
+        StringBuilder sb = new StringBuilder("All Accounts:\n");
+        for (BankAccount acc : accountDao.findAll()) {
+            sb.append(acc).append("\n");
+        }
+        JOptionPane.showMessageDialog(null, sb.toString());
+    }
+
+    private void displayTransactions() {
+        StringBuilder sb = new StringBuilder("All Transactions:\n");
+        for (Transaction tra : TRANSACTION_DAO.findAll()) {
+            sb.append(tra).append("\n");
+        }
+        JOptionPane.showMessageDialog(null, sb.toString());
+    }
+
+    private void displayTransactionById() {
+        int transactionId = Integer.parseInt(JOptionPane.showInputDialog("Enter transaction ID:"));
+        transaction = TRANSACTION_DAO.findById(transactionId);
+
+        JOptionPane.showMessageDialog(null, "Account Details:\n" + transaction);
+    }
+
+    private void withdraw() {
+        int accountId = Integer.parseInt(JOptionPane.showInputDialog("Enter account ID:"));
+        double withdrawAmount = Double.parseDouble(JOptionPane.showInputDialog("Enter withdrawal amount:"));
+
+        transaction = new Transaction(0, accountId, -withdrawAmount);
+        transaction.run();
+    }
+
+    private void deposit() {
         int accountId = Integer.parseInt(JOptionPane.showInputDialog("Enter account ID:"));
         double depositAmount = Double.parseDouble(JOptionPane.showInputDialog("Enter deposit amount:"));
 
@@ -95,53 +196,13 @@ public class BankGUI extends JFrame {
         JOptionPane.showMessageDialog(null, "Deposit successful!");
     }
 
-    private void withdraw(ActionEvent e) {
-        int accountId = Integer.parseInt(JOptionPane.showInputDialog("Enter account ID:"));
-        double withdrawAmount = Double.parseDouble(JOptionPane.showInputDialog("Enter withdrawal amount:"));
-
-        transaction = new Transaction(0, accountId, -withdrawAmount);
-        transaction.run();
-    }
-
-    private void transact(ActionEvent e) {
+    private void transact() {
         int fromId = Integer.parseInt(JOptionPane.showInputDialog("Enter your account ID:"));
         int toId = Integer.parseInt(JOptionPane.showInputDialog("Enter receiver's account ID:"));
         double amount = Double.parseDouble(JOptionPane.showInputDialog("Enter sending amount:"));
 
         transaction = new Transaction(0, fromId, toId, amount);
         transaction.run();
-    }
-
-    private void concurrency(ActionEvent e) {
-        System.out.println("Concurrency...");
-        Thread t1 = new Thread(new Transaction(0, 1, 2, 1d)); // initial balance of all of them is 100
-        Thread t2 = new Thread(new Transaction(0, 2, 3, 1d));
-        Thread t3 = new Thread(new Transaction(0, 3, 5, 1d));
-        Thread t4 = new Thread(new Transaction(0, 5, 8, 1d));
-        t1.start();
-        t2.start();
-        t3.start();
-        t4.start();
-        try {
-            t1.join();
-            t2.join();
-            t3.join();
-            t4.join();
-        } catch (InterruptedException ex) {
-            ex.printStackTrace();
-        }
-
-        JOptionPane.showMessageDialog(null, "Account 1:\n" + accountDao.findById(1) + "\nAccount 2:\n" + accountDao.findById(2) + "\nAccount 3:\n" + accountDao.findById(3) + "\nAccount 5:\n" + accountDao.findById(5) + "\nAccount 8:\n" + accountDao.findById(8));
-    }
-
-    private void setAllSameAmount(ActionEvent e) {
-        List<BankAccount> accounts = accountDao.findAll();
-        double amount = Double.parseDouble(JOptionPane.showInputDialog("Enter the amount:"));
-
-        for (BankAccount acc : accounts) {
-            acc.setBalance(amount);
-            accountDao.save(acc);
-        }
     }
 
     public static void main(String[] args) {
